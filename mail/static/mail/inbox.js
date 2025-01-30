@@ -8,10 +8,36 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // By default, load the inbox
   load_mailbox('inbox');
+
+  const compose_form = document.querySelector('#compose-form');
+
+  compose_form.addEventListener('submit', async event => {
+    event.preventDefault();
+
+    const recipients = compose_form.querySelector('#compose-recipients').value;
+    const subject = compose_form.querySelector('#compose-subject').value;
+    const body = compose_form.querySelector('#compose-body').value;
+
+    const return_validation = validate_compose(recipients, subject, body);
+
+    if (return_validation !== '') {
+      document.querySelector('#compose-validation-message').innerHTML = return_validation;
+      return;
+    }
+
+    const response = await post_email(recipients, subject, body);
+
+    if (response.error !== undefined) {
+      document.querySelector('#compose-validation-message').innerHTML = response.error;
+      return;
+    }
+
+    load_mailbox('sent');
+  });
 });
 
 function compose_email() {
-
+  document.querySelector('#compose-validation-message').innerHTML = "";
   // Show compose view and hide other views
   document.querySelector('#emails-view').style.display = 'none';
   document.querySelector('#compose-view').style.display = 'block';
@@ -22,12 +48,85 @@ function compose_email() {
   document.querySelector('#compose-body').value = '';
 }
 
-function load_mailbox(mailbox) {
-  
+async function load_mailbox(mailbox) {
   // Show the mailbox and hide other views
   document.querySelector('#emails-view').style.display = 'block';
   document.querySelector('#compose-view').style.display = 'none';
 
+  const emails = await get_response(mailbox);
+  let mail_list = "";
+  emails.forEach(mail => {
+    mail_list = mail_list + `<div>${mail.timestamp} - ${mail.subject} - ${mail.recipients.join(', ')}</div>`
+  });
   // Show the mailbox name
-  document.querySelector('#emails-view').innerHTML = `<h3>${mailbox.charAt(0).toUpperCase() + mailbox.slice(1)}</h3>`;
+  document.querySelector('#emails-view').innerHTML = `<h3>${mailbox.charAt(0).toUpperCase() + mailbox.slice(1)}</h3><div>${mail_list}</div>`;
+}
+
+async function get_response(parameter) {
+  return fetch(`/emails/${parameter}`)
+  .then(response => response.json())
+  .then(emails => {
+    return emails;
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    throw error;
+  });
+}
+
+async function post_email(recipients, subject, body) {
+  return fetch('/emails', {
+    method: 'POST',
+    body: JSON.stringify({
+      recipients: recipients,
+      subject: subject,
+      body: body
+    })
+  })
+  .then(response => response.json())
+  .then(result => {
+    console.log(result);
+    return result;
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    throw error;
+  });
+}
+
+function validate_compose(recipients, subject, body) {
+  const recipients_list = recipients.split(',');
+
+  recipients_list.forEach(element => {
+    if (!is_address_valid(element)) {
+      return 'Invalid recipient address.';
+    }
+  });
+
+  if (subject.trim() === "") {
+    return 'Subject must not be empty';
+  }
+
+  if (body.trim() === "") {
+    return 'Body must not be empty';
+  }
+
+  return '';
+}
+
+function is_address_valid(email_address) {
+  // i'm not going deep into validation, only validating basic formatting
+  const email_parts = email_address.split('@');
+
+  if (email_parts.length !== 2) {
+    return false;
+  }
+
+  const domain = email_parts[1];
+
+  if (!domain.includes('.')) {
+    return false;
+  }
+
+  return true;
 }
