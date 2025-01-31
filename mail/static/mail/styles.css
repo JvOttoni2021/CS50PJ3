@@ -14,7 +14,7 @@ textarea {
 .mail_box_content {
     row-gap: 5px;
     padding: 10px;
-    border: 1px solid black;
+    border: 1px solid #ced4da;
     border-radius: 5px;
 }
 

@@ -1,4 +1,4 @@
-const MAIL_BOX_CONTENT = '<a class="email_view_button" href="#" data-message="#EMAIL_ID#" onclick="open_visualization(event, this)"> \
+const MAIL_BOX_CONTENT = '<a class="email_view_button" href="#" data-message="#EMAIL_ID#" onclick="open_visualization(event, this, \'#HIDE_ARCHIVE#\')"> \
                           <div class="mail_box_content" style="background-color: #BORDER_COLOR#;">\
                           <div><b>Sender:</b> #SENDER# | <b>Subject:</b> #SUBJECT#</div>\
                           <div>#TIMESTAMP#</div></div></a>';
@@ -8,6 +8,7 @@ const MAIL_BODY_CONTENT = '<div class="mail_body_content">\
                           <div><b>To:</b> #RECIPIENT#</div>\
                           <div><b>Subject:</b> #SUBJECT#</div>\
                           <div><b>Timestamp:</b> #TIMESTAMP#</div>\
+                          <div #HIDE_ARCHIVE#><button class="btn btn-sm btn-outline-primary" id="archive_button" onclick="put_arquive(#EMAIL_ID#)">#ARCHIVE_TEXT#</button></div>\
                           <div><hr></div>\
                           <div>#BODY#</div>\
                           ';
@@ -63,7 +64,8 @@ function compose_email() {
   document.querySelector('#compose-body').value = '';
 }
 
-async function open_visualization(event, element) {
+async function open_visualization(event, element, hide_archive) {
+
   document.querySelector('#emails-view').style.display = 'none';
   document.querySelector('#compose-view').style.display = 'none';
   document.querySelector('#email-content-view').style.display = 'block';
@@ -75,7 +77,7 @@ async function open_visualization(event, element) {
     put_read(mail.id, true);
   }
 
-  document.querySelector('#email-content-view').innerHTML = get_mail_box_formated(mail.id, mail.sender, mail.subject, mail.timestamp, mail.read, mail.body, mail.recipients.join(", "));
+  document.querySelector('#email-content-view').innerHTML = get_mail_box_formated(mail.id, mail.sender, mail.subject, mail.timestamp, mail.read, mail.body, mail.recipients.join(", "), hide_archive, mail.archived);
 }
 
 function put_read(id, read) {
@@ -87,6 +89,19 @@ function put_read(id, read) {
   })
 }
 
+async function put_arquive(id) {
+  const mail = await get_response(id);
+
+  await fetch(`/emails/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify({
+      archived: !mail.archived
+    })
+  })
+
+  load_mailbox('inbox');
+}
+
 async function load_mailbox(mailbox) {
   // Show the mailbox and hide other views
   document.querySelector('#emails-view').style.display = 'block';
@@ -95,17 +110,26 @@ async function load_mailbox(mailbox) {
 
   const emails = await get_response(mailbox);
   let mail_list = "";
+  let hide_archive = '';
+  if (mailbox === 'sent') {
+    hide_archive = 'hidden';
+  }
   emails.forEach(mail => {
-    mail_list = mail_list + get_mail_box_formated(mail.id, mail.sender, mail.subject, mail.timestamp, mail.read, "", "");
+    mail_list = mail_list + get_mail_box_formated(mail.id, mail.sender, mail.subject, mail.timestamp, mail.read, "", "", hide_archive, "");
   });
   // Show the mailbox name
   document.querySelector('#emails-view').innerHTML = `<h3>${mailbox.charAt(0).toUpperCase() + mailbox.slice(1)}</h3><div id="mailbox_mails">${mail_list}</div>`;
 }
 
-function get_mail_box_formated(id, sender, subject, timestamp, read, body, recipient) {
+function get_mail_box_formated(id, sender, subject, timestamp, read, body, recipient, hide_archive, archived) {
   let border_color = "white";
   if (read) {
-    border_color = "#c5c4cc";
+    border_color = "#ced4da";
+  }
+
+  let archive_text = "Archive";
+  if (archived) {
+    archive_text = "Unarchive";
   }
 
   let replace_values = {
@@ -115,7 +139,9 @@ function get_mail_box_formated(id, sender, subject, timestamp, read, body, recip
     "#SENDER#": sender,
     "#BORDER_COLOR#": border_color,
     "#BODY#": body,
-    "#RECIPIENT#": recipient
+    "#RECIPIENT#": recipient,
+    "#HIDE_ARCHIVE#": hide_archive,
+    "#ARCHIVE_TEXT#": archive_text
   }
 
   let formatted_return = MAIL_BOX_CONTENT;
