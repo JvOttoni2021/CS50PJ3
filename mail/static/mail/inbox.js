@@ -1,3 +1,5 @@
+const MAIL_BOX_CONTENT = '<div class="mail_box_content" style="background-color: #BORDER_COLOR#;"><div><b>Sender:</b> #SENDER# | <b>Subject:</b> #SUBJECT#</div><div>#TIMESTAMP#</div></div>';
+
 document.addEventListener('DOMContentLoaded', function() {
 
   // Use buttons to toggle between views
@@ -37,12 +39,12 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function compose_email() {
-  document.querySelector('#compose-validation-message').innerHTML = "";
   // Show compose view and hide other views
   document.querySelector('#emails-view').style.display = 'none';
   document.querySelector('#compose-view').style.display = 'block';
 
   // Clear out composition fields
+  document.querySelector('#compose-validation-message').innerHTML = "";
   document.querySelector('#compose-recipients').value = '';
   document.querySelector('#compose-subject').value = '';
   document.querySelector('#compose-body').value = '';
@@ -56,10 +58,32 @@ async function load_mailbox(mailbox) {
   const emails = await get_response(mailbox);
   let mail_list = "";
   emails.forEach(mail => {
-    mail_list = mail_list + `<div>${mail.timestamp} - ${mail.subject} - ${mail.recipients.join(', ')}</div>`
+    mail_list = mail_list + get_mail_box_formated(mail.sender, mail.subject, mail.timestamp);
   });
   // Show the mailbox name
-  document.querySelector('#emails-view').innerHTML = `<h3>${mailbox.charAt(0).toUpperCase() + mailbox.slice(1)}</h3><div>${mail_list}</div>`;
+  document.querySelector('#emails-view').innerHTML = `<h3>${mailbox.charAt(0).toUpperCase() + mailbox.slice(1)}</h3><div id="mailbox_mails">${mail_list}</div>`;
+}
+
+function get_mail_box_formated(sender, subject, timestamp, read) {
+  let border_color = "white";
+  if (read) {
+    border_color = "gray";
+  }
+
+  let replace_values = {
+    "#SUBJECT#": subject,
+    "#TIMESTAMP#": timestamp,
+    "#SENDER#": sender,
+    "#BORDER_COLOR#": border_color
+  }
+
+  let formatted_return = MAIL_BOX_CONTENT;
+
+  for (let [key, value] of Object.entries(replace_values)) {
+    formatted_return = formatted_return.replace(key, value);
+  }
+
+  return formatted_return;
 }
 
 async function get_response(parameter) {

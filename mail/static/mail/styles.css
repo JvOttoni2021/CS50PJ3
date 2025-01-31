@@ -1,3 +1,19 @@
 textarea {
     min-height: 400px;
 }
+
+.mail_box_content, #mailbox_mails {
+    display: flex;
+    flex-direction: column;
+}
+
+#mailbox_mails {
+    row-gap: 10px;
+}
+
+.mail_box_content {
+    row-gap: 5px;
+    padding: 10px;
+    border: 1px solid black;
+    border-radius: 5px;
+}
