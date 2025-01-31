@@ -8,7 +8,8 @@ const MAIL_BODY_CONTENT = '<div class="mail_body_content">\
                             <div><b>To:</b> #RECIPIENT#</div>\
                             <div><b>Subject:</b> #SUBJECT#</div>\
                             <div><b>Timestamp:</b> #TIMESTAMP#</div>\
-                            <div #HIDE_ARCHIVE#><button class="btn btn-sm btn-outline-primary" id="archive_button" onclick="put_arquive(#EMAIL_ID#)">#ARCHIVE_TEXT#</button></div>\
+                            <div #HIDE_ARCHIVE#><button class="btn btn-sm btn-outline-primary" id="archive_button" onclick="put_arquive(#EMAIL_ID#)">#ARCHIVE_TEXT#</button>\
+                            <button class="btn btn-sm btn-outline-primary" id="archive_button" onclick="compose_email(\'#SENDER#\', \'#SUBJECT#\', \'#BODY#\', \'#TIMESTAMP#\')">Reply</button></div>\
                             <div><hr></div>\
                             <div>#BODY#</div>\
                           </div>';
@@ -51,7 +52,13 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 });
 
-function compose_email() {
+function compose_email(recipient = '', subject = '', body = '', timestamp = "") {
+
+  if (recipient !== "") {
+    if (!subject.startsWith("Re: ")) subject = "Re: " + subject;
+    body = `${timestamp} ${recipient} wrote: \r\n${body}`.replaceAll("<br>", "\r\n");
+  }
+
   // Show compose view and hide other views
   document.querySelector('#emails-view').style.display = 'none';
   document.querySelector('#email-content-view').style.display = 'none';
@@ -59,9 +66,9 @@ function compose_email() {
 
   // Clear out composition fields
   document.querySelector('#compose-validation-message').innerHTML = "";
-  document.querySelector('#compose-recipients').value = '';
-  document.querySelector('#compose-subject').value = '';
-  document.querySelector('#compose-body').value = '';
+  document.querySelector('#compose-recipients').value = recipient;
+  document.querySelector('#compose-subject').value = subject;
+  document.querySelector('#compose-body').value = body;
 }
 
 async function open_visualization(event, element, hide_archive) {
@@ -111,7 +118,7 @@ function get_mail_box_formated(id, sender, subject, timestamp, read, body, recip
     "#TIMESTAMP#": timestamp,
     "#SENDER#": sender,
     "#BACKGROUND_COLOR#": background_color,
-    "#BODY#": body,
+    "#BODY#": body.replace(/\r?\n/g, '<br>'),
     "#RECIPIENT#": recipient,
     "#HIDE_ARCHIVE#": hide_archive,
     "#ARCHIVE_TEXT#": archive_text
@@ -122,7 +129,7 @@ function get_mail_box_formated(id, sender, subject, timestamp, read, body, recip
   if (body !== "") formatted_return = MAIL_BODY_CONTENT;
 
   for (let [key, value] of Object.entries(replace_values)) {
-    formatted_return = formatted_return.replace(key, value);
+    formatted_return = formatted_return.replaceAll(key, value);
   }
 
   return formatted_return;
