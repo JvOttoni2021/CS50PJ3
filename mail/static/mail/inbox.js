@@ -1,17 +1,17 @@
 const MAIL_BOX_CONTENT = '<a class="email_view_button" href="#" data-message="#EMAIL_ID#" onclick="open_visualization(event, this, \'#HIDE_ARCHIVE#\')"> \
-                          <div class="mail_box_content" style="background-color: #BORDER_COLOR#;">\
+                          <div class="mail_box_content" style="background-color: #BACKGROUND_COLOR#;">\
                           <div><b>Sender:</b> #SENDER# | <b>Subject:</b> #SUBJECT#</div>\
                           <div>#TIMESTAMP#</div></div></a>';
 
 const MAIL_BODY_CONTENT = '<div class="mail_body_content">\
-                          <div><b>From:</b> #SENDER#</div>\
-                          <div><b>To:</b> #RECIPIENT#</div>\
-                          <div><b>Subject:</b> #SUBJECT#</div>\
-                          <div><b>Timestamp:</b> #TIMESTAMP#</div>\
-                          <div #HIDE_ARCHIVE#><button class="btn btn-sm btn-outline-primary" id="archive_button" onclick="put_arquive(#EMAIL_ID#)">#ARCHIVE_TEXT#</button></div>\
-                          <div><hr></div>\
-                          <div>#BODY#</div>\
-                          ';
+                            <div><b>From:</b> #SENDER#</div>\
+                            <div><b>To:</b> #RECIPIENT#</div>\
+                            <div><b>Subject:</b> #SUBJECT#</div>\
+                            <div><b>Timestamp:</b> #TIMESTAMP#</div>\
+                            <div #HIDE_ARCHIVE#><button class="btn btn-sm btn-outline-primary" id="archive_button" onclick="put_arquive(#EMAIL_ID#)">#ARCHIVE_TEXT#</button></div>\
+                            <div><hr></div>\
+                            <div>#BODY#</div>\
+                          </div>';
 
 document.addEventListener('DOMContentLoaded', function() {
 
@@ -80,28 +80,6 @@ async function open_visualization(event, element, hide_archive) {
   document.querySelector('#email-content-view').innerHTML = get_mail_box_formated(mail.id, mail.sender, mail.subject, mail.timestamp, mail.read, mail.body, mail.recipients.join(", "), hide_archive, mail.archived);
 }
 
-function put_read(id, read) {
-  fetch(`/emails/${id}`, {
-    method: 'PUT',
-    body: JSON.stringify({
-      read: read
-    })
-  })
-}
-
-async function put_arquive(id) {
-  const mail = await get_response(id);
-
-  await fetch(`/emails/${id}`, {
-    method: 'PUT',
-    body: JSON.stringify({
-      archived: !mail.archived
-    })
-  })
-
-  load_mailbox('inbox');
-}
-
 async function load_mailbox(mailbox) {
   // Show the mailbox and hide other views
   document.querySelector('#emails-view').style.display = 'block';
@@ -111,9 +89,8 @@ async function load_mailbox(mailbox) {
   const emails = await get_response(mailbox);
   let mail_list = "";
   let hide_archive = '';
-  if (mailbox === 'sent') {
-    hide_archive = 'hidden';
-  }
+  if (mailbox === 'sent') hide_archive = 'hidden';
+  
   emails.forEach(mail => {
     mail_list = mail_list + get_mail_box_formated(mail.id, mail.sender, mail.subject, mail.timestamp, mail.read, "", "", hide_archive, "");
   });
@@ -122,22 +99,18 @@ async function load_mailbox(mailbox) {
 }
 
 function get_mail_box_formated(id, sender, subject, timestamp, read, body, recipient, hide_archive, archived) {
-  let border_color = "white";
-  if (read) {
-    border_color = "#ced4da";
-  }
+  let background_color = "white";
+  if (read) background_color = "#ced4da";
 
   let archive_text = "Archive";
-  if (archived) {
-    archive_text = "Unarchive";
-  }
+  if (archived) archive_text = "Unarchive";
 
   let replace_values = {
     "#EMAIL_ID#": id,
     "#SUBJECT#": subject,
     "#TIMESTAMP#": timestamp,
     "#SENDER#": sender,
-    "#BORDER_COLOR#": border_color,
+    "#BACKGROUND_COLOR#": background_color,
     "#BODY#": body,
     "#RECIPIENT#": recipient,
     "#HIDE_ARCHIVE#": hide_archive,
@@ -146,9 +119,7 @@ function get_mail_box_formated(id, sender, subject, timestamp, read, body, recip
 
   let formatted_return = MAIL_BOX_CONTENT;
 
-  if (body !== "") {
-    formatted_return = MAIL_BODY_CONTENT;
-  }
+  if (body !== "") formatted_return = MAIL_BODY_CONTENT;
 
   for (let [key, value] of Object.entries(replace_values)) {
     formatted_return = formatted_return.replace(key, value);
@@ -157,54 +128,15 @@ function get_mail_box_formated(id, sender, subject, timestamp, read, body, recip
   return formatted_return;
 }
 
-async function get_response(parameter) {
-  return fetch(`/emails/${parameter}`)
-  .then(response => response.json())
-  .then(emails => {
-    return emails;
-  })
-  .catch(error => {
-    console.error('Error:', error);
-    throw error;
-  });
-}
-
-async function post_email(recipients, subject, body) {
-  return fetch('/emails', {
-    method: 'POST',
-    body: JSON.stringify({
-      recipients: recipients,
-      subject: subject,
-      body: body
-    })
-  })
-  .then(response => response.json())
-  .then(result => {
-    return result;
-  })
-  .catch(error => {
-    console.error('Error:', error);
-    throw error;
-  });
-}
-
 function validate_compose(recipients, subject, body) {
   const recipients_list = recipients.split(',');
 
   recipients_list.forEach(element => {
-    if (!is_address_valid(element)) {
-      return 'Invalid recipient address.';
-    }
+    if (!is_address_valid(element)) return 'Invalid recipient address.';
   });
 
-  if (subject.trim() === "") {
-    return 'Subject must not be empty';
-  }
-
-  if (body.trim() === "") {
-    return 'Body must not be empty';
-  }
-
+  if (subject.trim() === "") return 'Subject must not be empty';
+  if (body.trim() === "") return 'Body must not be empty';
   return '';
 }
 
@@ -212,15 +144,11 @@ function is_address_valid(email_address) {
   // i'm not going deep into validation, only validating basic formatting
   const email_parts = email_address.split('@');
 
-  if (email_parts.length !== 2) {
-    return false;
-  }
+  if (email_parts.length !== 2) return false;
 
   const domain = email_parts[1];
 
-  if (!domain.includes('.')) {
-    return false;
-  }
+  if (!domain.includes('.')) return false;
 
   return true;
 }
