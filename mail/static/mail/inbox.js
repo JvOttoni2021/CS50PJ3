@@ -1,4 +1,16 @@
-const MAIL_BOX_CONTENT = '<div class="mail_box_content" style="background-color: #BORDER_COLOR#;"><div><b>Sender:</b> #SENDER# | <b>Subject:</b> #SUBJECT#</div><div>#TIMESTAMP#</div></div>';
+const MAIL_BOX_CONTENT = '<a class="email_view_button" href="#" data-message="#EMAIL_ID#" onclick="open_visualization(event, this)"> \
+                          <div class="mail_box_content" style="background-color: #BORDER_COLOR#;">\
+                          <div><b>Sender:</b> #SENDER# | <b>Subject:</b> #SUBJECT#</div>\
+                          <div>#TIMESTAMP#</div></div></a>';
+
+const MAIL_BODY_CONTENT = '<div class="mail_body_content">\
+                          <div><b>From:</b> #SENDER#</div>\
+                          <div><b>To:</b> #RECIPIENT#</div>\
+                          <div><b>Subject:</b> #SUBJECT#</div>\
+                          <div><b>Timestamp:</b> #TIMESTAMP#</div>\
+                          <div><hr></div>\
+                          <div>#BODY#</div>\
+                          ';
 
 document.addEventListener('DOMContentLoaded', function() {
 
@@ -41,6 +53,7 @@ document.addEventListener('DOMContentLoaded', function() {
 function compose_email() {
   // Show compose view and hide other views
   document.querySelector('#emails-view').style.display = 'none';
+  document.querySelector('#email-content-view').style.display = 'none';
   document.querySelector('#compose-view').style.display = 'block';
 
   // Clear out composition fields
@@ -50,34 +63,66 @@ function compose_email() {
   document.querySelector('#compose-body').value = '';
 }
 
+async function open_visualization(event, element) {
+  document.querySelector('#emails-view').style.display = 'none';
+  document.querySelector('#compose-view').style.display = 'none';
+  document.querySelector('#email-content-view').style.display = 'block';
+
+  event.preventDefault();
+  mail = await get_response(element.dataset.message);
+
+  if (!mail.read){
+    put_read(mail.id, true);
+  }
+
+  document.querySelector('#email-content-view').innerHTML = get_mail_box_formated(mail.id, mail.sender, mail.subject, mail.timestamp, mail.read, mail.body, mail.recipients.join(", "));
+}
+
+function put_read(id, read) {
+  fetch(`/emails/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify({
+      read: read
+    })
+  })
+}
+
 async function load_mailbox(mailbox) {
   // Show the mailbox and hide other views
   document.querySelector('#emails-view').style.display = 'block';
   document.querySelector('#compose-view').style.display = 'none';
+  document.querySelector('#email-content-view').style.display = 'none';
 
   const emails = await get_response(mailbox);
   let mail_list = "";
   emails.forEach(mail => {
-    mail_list = mail_list + get_mail_box_formated(mail.sender, mail.subject, mail.timestamp);
+    mail_list = mail_list + get_mail_box_formated(mail.id, mail.sender, mail.subject, mail.timestamp, mail.read, "", "");
   });
   // Show the mailbox name
   document.querySelector('#emails-view').innerHTML = `<h3>${mailbox.charAt(0).toUpperCase() + mailbox.slice(1)}</h3><div id="mailbox_mails">${mail_list}</div>`;
 }
 
-function get_mail_box_formated(sender, subject, timestamp, read) {
+function get_mail_box_formated(id, sender, subject, timestamp, read, body, recipient) {
   let border_color = "white";
   if (read) {
-    border_color = "gray";
+    border_color = "#c5c4cc";
   }
 
   let replace_values = {
+    "#EMAIL_ID#": id,
     "#SUBJECT#": subject,
     "#TIMESTAMP#": timestamp,
     "#SENDER#": sender,
-    "#BORDER_COLOR#": border_color
+    "#BORDER_COLOR#": border_color,
+    "#BODY#": body,
+    "#RECIPIENT#": recipient
   }
 
   let formatted_return = MAIL_BOX_CONTENT;
+
+  if (body !== "") {
+    formatted_return = MAIL_BODY_CONTENT;
+  }
 
   for (let [key, value] of Object.entries(replace_values)) {
     formatted_return = formatted_return.replace(key, value);
@@ -109,7 +154,6 @@ async function post_email(recipients, subject, body) {
   })
   .then(response => response.json())
   .then(result => {
-    console.log(result);
     return result;
   })
   .catch(error => {

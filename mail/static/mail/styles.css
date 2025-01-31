@@ -2,7 +2,7 @@ textarea {
     min-height: 400px;
 }
 
-.mail_box_content, #mailbox_mails {
+.mail_box_content, #mailbox_mails, .mail_body_content {
     display: flex;
     flex-direction: column;
 }
@@ -16,4 +16,17 @@ textarea {
     padding: 10px;
     border: 1px solid black;
     border-radius: 5px;
+}
+
+.mail_box_content:hover {
+    background-color: #f7f5ff !important;
+}
+
+.email_view_button {
+    color: black;
+}
+
+.email_view_button:hover {
+    color: inherit;
+    text-decoration: none;
 }
